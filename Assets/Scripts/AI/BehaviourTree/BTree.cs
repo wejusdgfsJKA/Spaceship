@@ -8,12 +8,11 @@ public abstract class BTree : MonoBehaviour
     public bool ShouldRun { get; set; } = true;
     protected Composite root = null;
     protected Coroutine coroutine;
-    protected BlackBoard localMemory = null;
+    protected BlackBoard localMemory = new();
     protected WaitForSeconds waitInterval;
     protected WaitUntil waitForPermission;
     protected virtual void Awake()
     {
-        localMemory = new BlackBoard();
         waitInterval = new(updateinterval);
         waitForPermission = new(() => { return ShouldRun; });
         root = SetupTree();
@@ -41,7 +40,7 @@ public abstract class BTree : MonoBehaviour
         }
     }
     protected abstract Composite SetupTree();
-    public void SetData<T>(string _key, T _value)
+    public void SetData<T>(string _blackboard, string _key, T _value)
     {
         localMemory.SetData<T>(_key, _value);
     }
