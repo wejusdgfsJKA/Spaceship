@@ -49,12 +49,12 @@ public class Decorator : ElementBase
         }
         _debug.Append($"D: {Name} [{(result ? "PASS" : "FAIL")}]");
     }
-    public void MonitorValue(BlackBoard _data, string _key)
+    public void MonitorValue(BlackBoard _data, BlackboardData _key)
     {
         //subscribe to relevant data
         _data.AddListener(onDataChanged, _key);
     }
-    public void StopMonitoringValue(BlackBoard _data, string _key)
+    public void StopMonitoringValue(BlackBoard _data, BlackboardData _key)
     {
         //unsubscribe from data which is no longer relevant
         _data.AddListener(onDataChanged, _key);

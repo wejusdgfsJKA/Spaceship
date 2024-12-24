@@ -40,7 +40,7 @@ public abstract class BTree : MonoBehaviour
         }
     }
     protected abstract Composite SetupTree();
-    public void SetData<T>(string _blackboard, string _key, T _value)
+    public void SetData<T>(string _blackboard, BlackboardData _key, T _value)
     {
         localMemory.SetData<T>(_key, _value);
     }

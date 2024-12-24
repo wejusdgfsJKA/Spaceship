@@ -1,6 +1,13 @@
 using System;
 using System.Collections.Generic;
 
+public enum BlackboardData
+{
+    Target,
+    Destination,
+    ClearPath,
+    AlternateDirection
+}
 public class BlackBoard
 {
     public class Data
@@ -28,8 +35,8 @@ public class BlackBoard
             Value = _value;
         }
     }
-    protected Dictionary<string, Data> data = new();
-    public void SetData<T>(string _key, T _value)
+    protected Dictionary<BlackboardData, Data> data = new();
+    public void SetData<T>(BlackboardData _key, T _value)
     {
         if (data.ContainsKey(_key))
         {
@@ -40,21 +47,21 @@ public class BlackBoard
             data.Add(_key, new Data(_value));
         }
     }
-    public void AddListener(Action _action, string _key)
+    public void AddListener(Action _action, BlackboardData _key)
     {
         if (data.ContainsKey(_key))
         {
             data[_key].OnValueChanged += _action;
         }
     }
-    public void RemoveListener(Action _action, string _key)
+    public void RemoveListener(Action _action, BlackboardData _key)
     {
         if (data.ContainsKey(_key))
         {
             data[_key].OnValueChanged -= _action;
         }
     }
-    public T GetData<T>(string _key)
+    public T GetData<T>(BlackboardData _key)
     {
         if (data.ContainsKey(_key))
         {

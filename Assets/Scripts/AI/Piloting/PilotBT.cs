@@ -1,24 +1,26 @@
+using UnityEditor;
 using UnityEngine;
 
+[RequireComponent(typeof(SphereCheck))]
 public class PilotBT : BTree
 {
     public Transform target;
     public float speed;
     public float minDistToTarget;
-    protected SphereCheck collisionSensor;
-    public float distcheck;
+    public SphereCheck collisionSensor;
+    public float distCheck;
+    public float extendedDistCheck;
     protected Rigidbody rb;
     protected override Composite SetupTree()
     {
         collisionSensor = GetComponentInChildren<SphereCheck>();
         rb = transform.root.gameObject.GetComponent<Rigidbody>();
 
-        localMemory.SetData<Vector3?>("Dest", target.position);
+        localMemory.SetData<Vector3?>(BlackboardData.Destination, target.position);
 
         LeafNode _idle = new LeafNode("Idle",
         () =>
         {
-            Debug.Log("Idle");
             return NodeState.RUNNING;
         });
 
@@ -32,34 +34,48 @@ public class PilotBT : BTree
     {
         Selector _sel = new Selector("Get to destination");
         _sel.AddDecorator(new Decorator("Has dest", () =>
-            localMemory.GetData<Vector3?>("Dest") != null)).
-            MonitorValue(localMemory, "Dest");
+            localMemory.GetData<Vector3?>(BlackboardData.Destination) != null)).
+            MonitorValue(localMemory, BlackboardData.Destination);
         _parent.AddChild(_sel);
 
         //first we try to go straight towards the target
         AddStraightFlightSubtree(_sel);
         _sel.AddService(new Service("Check for obstacles", () =>
         {
-            Vector3 _v = localMemory.GetData<Vector3>("Dest");
-            bool _clear = !collisionSensor.PerformLineCheck(_v);
-            localMemory.SetData("ClearPath", _clear);
-            if (!_clear)
+            Vector3? _v = localMemory.GetData<Vector3?>(BlackboardData.Destination);
+            if (_v != null)
             {
-                //we need to find alternative directions
-                Vector3? _v1 = localMemory.GetData<Vector3?>("AltDir");
-                if (_v1 == null || collisionSensor.PerformRayCheck((Vector3)_v1))
+                bool _prevClear = localMemory.GetData<bool>(BlackboardData.ClearPath);
+                bool _clear;
+                if (_prevClear)
                 {
-                    localMemory.SetData("AltDir", collisionSensor.
-                        GetValidDirection());
+                    _clear = !collisionSensor.PerformLineCheck((Vector3)_v, distCheck);
                 }
-            }
-            if (_clear)
-            {
-                Debug.DrawLine(transform.position, _v, Color.green, .1f);
-            }
-            else
-            {
-                Debug.DrawLine(transform.position, _v, Color.red, .1f);
+                else
+                {
+                    _clear = (!collisionSensor.PerformLineCheck((Vector3)_v,
+                        distCheck)) && (!collisionSensor.
+                        PerformLineCheck((Vector3)_v, extendedDistCheck));
+                }
+                localMemory.SetData(BlackboardData.ClearPath, _clear);
+                if (!_clear)
+                {
+                    //we need to find alternative directions
+                    Vector3? _v1 = localMemory.GetData<Vector3?>(BlackboardData.AlternateDirection);
+                    if (_v1 == null || collisionSensor.PerformRayCheck((Vector3)_v1))
+                    {
+                        localMemory.SetData(BlackboardData.AlternateDirection, collisionSensor.
+                            GetValidDirection(distCheck));
+                    }
+                }
+                if (_clear)
+                {
+                    Debug.DrawLine(transform.position, (Vector3)_v, Color.green, .1f);
+                }
+                else
+                {
+                    Debug.DrawLine(transform.position, (Vector3)_v, Color.red, .1f);
+                }
             }
         }));
 
@@ -67,16 +83,17 @@ public class PilotBT : BTree
     }
     protected void AddStraightFlightSubtree(Composite _parent)
     {
-        localMemory.SetData("ClearPath", true);
+        localMemory.SetData(BlackboardData.ClearPath, true);
         LeafNode _goStraight = new LeafNode("Go straight",
         () =>
         {
             if (Vector3.SqrMagnitude(transform.position - localMemory.
-                GetData<Vector3>("Dest")) <= minDistToTarget)
+                GetData<Vector3>(BlackboardData.Destination)) <= minDistToTarget)
             {
+                localMemory.SetData<Vector3?>(BlackboardData.Destination, null);
                 return NodeState.SUCCESS;
             }
-            transform.root.LookAt(localMemory.GetData<Vector3>("Dest"));
+            transform.root.LookAt(localMemory.GetData<Vector3>(BlackboardData.Destination));
             rb.velocity = transform.forward * speed;
             return NodeState.RUNNING;
         },
@@ -86,19 +103,19 @@ public class PilotBT : BTree
             rb.velocity = Vector3.zero;
         });
         _goStraight.AddDecorator(new Decorator("ClearPath",
-            () => localMemory.GetData<bool>("ClearPath"))).
-            MonitorValue(localMemory, "ClearPath");
+            () => localMemory.GetData<bool>(BlackboardData.ClearPath))).
+            MonitorValue(localMemory, BlackboardData.ClearPath);
         _parent.AddChild(_goStraight);
     }
     protected void AddObstacleAvoidanceSubtree(Composite _parent)
     {
-        localMemory.SetData<Vector3?>("AltDir", null);
+        localMemory.SetData<Vector3?>(BlackboardData.AlternateDirection, null);
         //we have an obstacle in front of us
         LeafNode _findNewPath = new LeafNode("Find new path",
         () =>
         {
             transform.root.LookAt(transform.position + localMemory.
-                GetData<Vector3>("AltDir"));
+                GetData<Vector3>(BlackboardData.AlternateDirection));
             rb.velocity = transform.forward * speed;
             return NodeState.RUNNING;
         },
@@ -108,7 +125,42 @@ public class PilotBT : BTree
             rb.velocity = Vector3.zero;
         });
         _findNewPath.AddDecorator(new Decorator("Has altdir",
-            () => localMemory.GetData<Vector3?>("AltDir") != null));
+            () => localMemory.GetData<Vector3?>(BlackboardData.
+            AlternateDirection) != null)).MonitorValue(localMemory,
+            BlackboardData.AlternateDirection);
         _parent.AddChild(_findNewPath);
     }
 }
+
+#if UNITY_EDITOR
+[CustomEditor(typeof(PilotBT))]
+public class PilotBTDebug : Editor
+{
+    private void OnSceneGUI()
+    {
+        PilotBT pilotBT = (PilotBT)target;
+
+        Handles.color = Color.white;
+        Handles.DrawWireArc(pilotBT.transform.position + pilotBT.
+            transform.forward * pilotBT.distCheck, pilotBT.transform.forward,
+            pilotBT.transform.up, 360, pilotBT.collisionSensor.radius);
+        Handles.DrawWireArc(pilotBT.transform.position + pilotBT.
+            transform.forward * pilotBT.distCheck, pilotBT.transform.up,
+            pilotBT.transform.forward, 360, pilotBT.collisionSensor.radius);
+        Handles.DrawWireArc(pilotBT.transform.position + pilotBT.
+            transform.forward * pilotBT.distCheck, pilotBT.transform.right,
+            pilotBT.transform.forward, 360, pilotBT.collisionSensor.radius);
+
+        Handles.color = Color.magenta;
+        Handles.DrawWireArc(pilotBT.transform.position + pilotBT.
+            transform.forward * pilotBT.extendedDistCheck, pilotBT.transform.forward,
+            pilotBT.transform.up, 360, pilotBT.collisionSensor.radius);
+        Handles.DrawWireArc(pilotBT.transform.position + pilotBT.
+            transform.forward * pilotBT.extendedDistCheck, pilotBT.transform.up,
+            pilotBT.transform.forward, 360, pilotBT.collisionSensor.radius);
+        Handles.DrawWireArc(pilotBT.transform.position + pilotBT.
+            transform.forward * pilotBT.extendedDistCheck, pilotBT.transform.right,
+            pilotBT.transform.forward, 360, pilotBT.collisionSensor.radius);
+    }
+}
+#endif
