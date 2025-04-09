@@ -1,62 +1,98 @@
 using System;
 using System.Text;
-public class Decorator : ElementBase
+
+namespace BTree
 {
-    public Func<bool> OnEvaluate;
-    protected bool result = true;
-    public bool Result
+    public class Decorator : ElementBase
     {
-        get
+        /// <summary>
+        /// Returns true if all conditions have been passed, 
+        /// false otherwise.
+        /// </summary>
+        public Func<bool> OnEvaluate;
+        protected bool result = true;
+        /// <summary>
+        /// The result of OnEvaluate.
+        /// </summary>
+        public bool Result
         {
-            return Result;
-        }
-        protected set
-        {
-            if (result != value)
+            get
             {
-                //the decorator's state changes, we need to notify our listeners
-                result = value;
-                if (result)
+                return Result;
+            }
+            protected set
+            {
+                if (result != value)
                 {
-                    OnPass();
-                }
-                else
-                {
-                    OnFail();
+                    //the decorator's state changes, we need to notify our listeners
+                    result = value;
+                    if (result)
+                    {
+                        OnPass();
+                    }
+                    else
+                    {
+                        OnFail();
+                    }
                 }
             }
         }
-    }
-    protected Action onDataChanged;
-
-    public Action OnPass, OnFail;
-    public Decorator(string _name, Func<bool> _onevaluate)
-    {
-        Name = _name;
-        OnEvaluate = _onevaluate;
-        onDataChanged += () =>
+        /// <summary>
+        /// Fires when the value of a monitored resource changes.
+        /// </summary>
+        protected Action onDataChanged;
+        /// <summary>
+        /// Fires when the Decorator has passed all conditions.
+        /// </summary>
+        public Action OnPass;
+        /// <summary>
+        /// Fires when the Decorator is no longer passing all conditions.
+        /// </summary>
+        public Action OnFail;
+        public Decorator(string name, Func<bool> onevaluate)
         {
-            //re-evaluate everytime the value of the data changes
-            Result = OnEvaluate();
-        };
-    }
-    public override void GetDebugTextInternal(StringBuilder _debug, int _indentlevel = 0)
-    {
-        // apply the indent
-        for (int _index = 0; _index < _indentlevel; ++_index)
-        {
-            _debug.Append(' ');
+            Name = name;
+            OnEvaluate = onevaluate;
+            onDataChanged += () =>
+            {
+                //re-evaluate everytime the value of the data changes
+                Result = OnEvaluate();
+            };
         }
-        _debug.Append($"D: {Name} [{(result ? "PASS" : "FAIL")}]");
-    }
-    public void MonitorValue(BlackBoard _data, BlackboardData _key)
-    {
-        //subscribe to relevant data
-        _data.AddListener(onDataChanged, _key);
-    }
-    public void StopMonitoringValue(BlackBoard _data, BlackboardData _key)
-    {
-        //unsubscribe from data which is no longer relevant
-        _data.AddListener(onDataChanged, _key);
+        /// <summary>
+        /// Get info about this Decorator(Whether it has passed or not).
+        /// </summary>
+        /// <param name="debug">StringBuilder instance.</param>
+        /// <param name="indentlevel">Level of indentation we should apply.</param>
+        public override void GetDebugTextInternal(StringBuilder
+            debug, int indentlevel = 0)
+        {
+            // apply the indent
+            for (int index = 0; index < indentlevel; ++index)
+            {
+                debug.Append(' ');
+            }
+            debug.Append($"D: {Name} [{(result ? "PASS" : "FAIL")}]");
+        }
+        /// <summary>
+        /// Begin monitoring a relevant resource.
+        /// </summary>
+        /// <param name="data">Blackboard being monitored.</param>
+        /// <param name="key">The key of the resource we want monitored.</param>
+        public void MonitorValue(BlackBoard data, string key)
+        {
+            //subscribe to relevant data
+            data.AddListener(onDataChanged, key);
+        }
+        /// <summary>
+        /// Stop monitoring a resource.
+        /// </summary>
+        /// <param name="data">The Blackboard we were monitoring.</param>
+        /// <param name="key">The key of the resource we were monitoring</param>
+        public void StopMonitoringValue(BlackBoard data, string key)
+        {
+            //unsubscribe from data which is no longer relevant
+            data.RemoveListener(onDataChanged, key);
+        }
     }
 }

@@ -1,76 +1,104 @@
 using System;
 using System.Collections.Generic;
 
-public enum BlackboardData
+namespace BTree
 {
-    Target,
-    Destination,
-    ClearPath,
-    AlternateDirection
-}
-public class BlackBoard
-{
-    public class Data
+    public class BlackBoard
     {
-        protected object currentValue;
-        public object Value
+        /// <summary>
+        /// This is a wrapper for a resource which decorators can keep track of.
+        /// </summary>
+        public class Data
         {
-            get
+            protected object currentValue;
+            public object Value
             {
-                return currentValue;
-            }
-            set
-            {
-                currentValue = value;
-                if (OnValueChanged != null)
+                get
                 {
-                    OnValueChanged();
+                    return currentValue;
+                }
+                set
+                {
+                    //this is used so listeners know when the value is changed
+                    currentValue = value;
+                    if (OnValueChanged != null)
+                    {
+                        OnValueChanged();
+                    }
                 }
             }
-        }
 
-        public event Action OnValueChanged;
-        public Data(object _value)
-        {
-            Value = _value;
+            public event Action OnValueChanged;
+            public Data(object value)
+            {
+                Value = value;
+            }
         }
-    }
-    protected Dictionary<BlackboardData, Data> data = new();
-    public void SetData<T>(BlackboardData _key, T _value)
-    {
-        if (data.ContainsKey(_key))
+        protected Dictionary<string, Data> data = new();
+        /// <summary>
+        /// Set the value of a resource given by a key. If the key cannot be found, 
+        /// a new pair will be added to the internal HashMap.
+        /// </summary>
+        /// <typeparam name="T">The datatype of the resource.</typeparam>
+        /// <param name="key">The key which will identify the resource.</param>
+        /// <param name="value">The value of the resource.</param>
+        public void SetData<T>(string key, T value)
         {
-            data[_key].Value = _value;
+            Data resource;
+            if (data.TryGetValue(key, out resource))
+            {
+                resource.Value = value;
+            }
+            else
+            {
+                data.Add(key, new Data(value));
+            }
         }
-        else
+        /// <summary>
+        /// When the value of the resource given by the key changes, the given action will fire.
+        /// </summary>
+        /// <param name="action"></param>
+        /// <param name="key"></param>
+        public void AddListener(Action action, string key)
         {
-            data.Add(_key, new Data(_value));
+            Data resource;
+            if (data.TryGetValue(key, out resource))
+            {
+                resource.OnValueChanged += action;
+            }
         }
-    }
-    public void AddListener(Action _action, BlackboardData _key)
-    {
-        if (data.ContainsKey(_key))
+        /// <summary>
+        /// Remove an action that was tied to this resource.
+        /// </summary>
+        /// <param name="action"></param>
+        /// <param name="key"></param>
+        public void RemoveListener(Action action, string key)
         {
-            data[_key].OnValueChanged += _action;
+            Data resource;
+            if (data.TryGetValue(key, out resource))
+            {
+                resource.OnValueChanged -= action;
+            }
         }
-    }
-    public void RemoveListener(Action _action, BlackboardData _key)
-    {
-        if (data.ContainsKey(_key))
+        /// <summary>
+        /// Get data stored at this key.
+        /// </summary>
+        /// <typeparam name="T">The datatype of the resource.</typeparam>
+        /// <param name="key">The key which identifies the resource.</param>
+        /// <returns>Returns the value of the resource if the key is found, 
+        /// or the default value otherwise.</returns>
+        public T GetData<T>(string key)
         {
-            data[_key].OnValueChanged -= _action;
+            Data resource;
+            if (data.TryGetValue(key, out resource))
+            {
+                return (T)resource.Value;
+            }
+            return default;
         }
-    }
-    public T GetData<T>(BlackboardData _key)
-    {
-        if (data.ContainsKey(_key))
+        public BlackBoard()
         {
-            return (T)data[_key].Value;
+            data = new();
         }
-        return default;
-    }
-    public BlackBoard()
-    {
-        data = new();
     }
 }

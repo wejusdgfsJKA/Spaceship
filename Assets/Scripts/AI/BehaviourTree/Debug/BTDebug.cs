@@ -1,23 +1,26 @@
 using TMPro;
 using UnityEngine;
 
-public class BTDebug : MonoBehaviour
+namespace BTree
 {
-    [SerializeField] BTree LinkedBT;
-    [SerializeField] TextMeshProUGUI LinkedDebugText;
-
-    // Start is called before the first frame update
-    void Start()
+    public class BTDebug : MonoBehaviour
     {
-        LinkedDebugText.text = "";
-    }
+        [SerializeField] BTree LinkedBT;
+        [SerializeField] TextMeshProUGUI LinkedDebugText;
 
-    // Update is called once per frame
-    void Update()
-    {
-        if (LinkedBT != null)
+        // Start is called before the first frame update
+        void Start()
         {
-            LinkedDebugText.text = LinkedBT.GetDebugText();
+            LinkedDebugText.text = "";
+        }
+
+        // Update is called once per frame
+        void Update()
+        {
+            if (LinkedBT != null)
+            {
+                LinkedDebugText.text = LinkedBT.GetDebugText();
+            }
         }
     }
 }

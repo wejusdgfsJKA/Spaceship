@@ -1,42 +1,55 @@
-public class Sequence : Composite
+namespace BTree
 {
-    public Sequence(string _name) : base(_name) { }
-    public override bool Evaluate()
+    /// <summary>
+    /// Evaluate all children in order, from left to right.
+    /// If found successfull child node, go to next child. State is RUNNING. <br />
+    /// If found running child node, state is RUNNING. <br />
+    /// If childd node has failed, state is FAILURE. <br />
+    /// State is SUCCESS if all child nodes return SUCCESS.
+    /// </summary>
+    public class Sequence : Composite
     {
-        if (base.Evaluate())
+        public Sequence(string name) : base(name) { }
+        public override bool Evaluate()
         {
-            for (int i = leftmost; i < children.Count; i++)
+            if (base.Evaluate())
             {
-                children[i].Evaluate();
-                switch (children[i].State)
+                for (int i = leftmost; i < children.Count; i++)
                 {
-                    case NodeState.RUNNING:
-                        state = NodeState.RUNNING;
-                        leftmost = i;
-                        return false;
-                    case NodeState.SUCCESS:
-                        state = NodeState.RUNNING;
-                        continue;
-                    case NodeState.FAILURE:
-                        state = NodeState.FAILURE;
-                        return false;
+                    children[i].Evaluate();
+                    switch (children[i].State)
+                    {
+                        case NodeState.RUNNING:
+                            state = NodeState.RUNNING;
+                            leftmost = i;
+                            return false;
+                        case NodeState.SUCCESS:
+                            state = NodeState.RUNNING;
+                            continue;
+                        case NodeState.FAILURE:
+                            state = NodeState.FAILURE;
+                            return false;
+                    }
                 }
+                state = NodeState.SUCCESS;
+                return true;
             }
-            state = NodeState.SUCCESS;
-            return true;
+            return false;
         }
-        return false;
-    }
-    public override void NewLeftmost(Node _child)
-    {
-        //we don't need to do anything here
-    }
-    public override void UpdateLeftmost()
-    {
-        //if our current node is no longer valid we need to abort
-        if (state == NodeState.RUNNING)
+        /// <summary>
+        /// Doesn't do anything.
+        /// </summary>
+        /// <param name="child"></param>
+        public override void NewLeftmost(Node child) { }
+        /// <summary>
+        /// If our current running node is no longer valid, we need to abort.
+        /// </summary>
+        public override void UpdateLeftmost()
         {
-            Abort();
+            if (state == NodeState.RUNNING)
+            {
+                Abort();
+            }
         }
     }
 }

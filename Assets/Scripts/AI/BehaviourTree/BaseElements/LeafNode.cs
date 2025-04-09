@@ -1,23 +1,32 @@
 using System;
-public class LeafNode : Node
+namespace BTree
 {
-    //action node
-    protected Func<NodeState> onEvaluate;
-    public LeafNode(string _name, Func<NodeState> _evaluate, Action _enter = null,
-        Action _exit = null) : base(_name, _enter, _exit)
+    /// <summary>
+    /// This node will always be at the bottom of the tree.
+    /// </summary>
+    public class LeafNode : Node
     {
-        onEvaluate = _evaluate;
-    }
-    public override bool Evaluate()
-    {
-        if (base.Evaluate())
+        protected Func<NodeState> onEvaluate;
+        public LeafNode(string name, Func<NodeState> evaluate, Action enter = null,
+            Action exit = null) : base(name, enter, exit)
         {
-            if (onEvaluate != null)
-            {
-                State = onEvaluate();
-                return false;
-            }
+            onEvaluate = evaluate;
         }
-        return false;
+        /// <summary>
+        /// If possible, run onEvaluate.
+        /// </summary>
+        /// <returns></returns>
+        public override bool Evaluate()
+        {
+            if (base.Evaluate())
+            {
+                if (onEvaluate != null)
+                {
+                    State = onEvaluate();
+                    return false;
+                }
+            }
+            return false;
+        }
     }
 }

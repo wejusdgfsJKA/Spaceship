@@ -1,15 +1,23 @@
 using System.Text;
 
-public abstract class ElementBase
+namespace BTree
 {
-    public string Name { get; protected set; }
-    public string GetDebugText(int _indentlevel = 0)
+    public abstract class ElementBase
     {
-        StringBuilder _debugtextbuilder = new StringBuilder();
+        public string Name { get; protected set; }
+        /// <summary>
+        /// Get debug text regarding the state of this element.
+        /// </summary>
+        /// <param name="indentlevel">How much we should indent.</param>
+        /// <returns>Text regarding the state of this element.</returns>
+        public string GetDebugText(int indentlevel = 0)
+        {
+            StringBuilder debugtextbuilder = new StringBuilder();
 
-        GetDebugTextInternal(_debugtextbuilder, _indentlevel);
+            GetDebugTextInternal(debugtextbuilder, indentlevel);
 
-        return _debugtextbuilder.ToString();
+            return debugtextbuilder.ToString();
+        }
+        public abstract void GetDebugTextInternal(StringBuilder debugTextBuilder, int indentLevel = 0);
     }
-    public abstract void GetDebugTextInternal(StringBuilder _debugTextBuilder, int _indentLevel = 0);
 }
